@@ -99,7 +99,7 @@ When running locally:
 ## Deployment
 This application is designed to be deployed on Render.
 
-**Live demo**: [https://information-hub.onrender.com]
+**Live demo**: [https://rag-infohub.onrender.com]
 (*Note: Free tier spins down after inactivity - first load may take 30 seconds.*)
 
 ## References
@@ -109,4 +109,5 @@ This application is designed to be deployed on Render.
 - [Prometheus Documentation](https://prometheus.io/)
 - [OpenAI API Documentation](https://platform.openai.com/)
 - [Docker Documentation](https://docs.docker.com/)
+
 - [Render Documentation](https://render.com/docs)
