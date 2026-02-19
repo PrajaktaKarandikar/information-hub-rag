@@ -1,0 +1,27 @@
+application:
+  name: "Production RAG API"
+  version: "1.0"
+  description: "A project to implement a Retrieval-Augmented Generation (RAG) API for production use, with S3 storage, web and local file support."
+  
+pdf:
+  file_path: "data/2023_GPT4All_Technical_Report.pdf"
+
+sources:
+  web:
+    - "https://en.wikipedia.org/wiki/Machine_learning"
+    - "https://en.wikipedia.org/wiki/Large_language_model"
+ 
+embeddings:
+  model: "text-embedding-3-small"
+  
+llm:
+  model: "gpt-3.5-turbo"
+  temperature: 0.0
+
+rag:
+  chunk_size: 1000
+  chunk_overlap: 200
+
+server:
+  host: "0.0.0.0"
+  port: 8000
