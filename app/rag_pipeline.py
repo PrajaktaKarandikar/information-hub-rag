@@ -4,6 +4,7 @@ Uses multiple sources, caching and observability.
 """
 import os
 from pydoc import doc
+import sys
 from typing import List, Dict, Any, Optional
 import logging
 import time
@@ -16,7 +17,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import faiss
 from langchain_community.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
-from langchain_openai import OpenAI
+from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain_community.callbacks.manager import get_openai_callback
 
@@ -46,6 +47,39 @@ class ProductionRAGPipeline:
         self.embeddings = OpenAIEmbeddings(
             model=CONFIG['embeddings']['model'], 
         )
+
+    def _create_qa_chain(self):
+        """
+        Create question-answering (qa) chain with a better prompt template and error handling.
+        """    
+        prompt_template = """You are a helpful assistant that answers questions based on the provided information. Use the following context to answer the question. 
+        
+        Context:
+        {context}
+
+        Question: {question}
+
+        Answer in a concise and accurate manner, and only use the provided context to answer. If the answer is not in the context, say "I don't know".
+        """
+        logger.info("Creating QA chain with improved prompt template.")
+        
+        PROMPT = PromptTemplate(
+            template=prompt_template, 
+            input_variables=["context", "question"]
+        )
+
+        llm = ChatOpenAI(
+            openai_api_key=self.openai_api_key,
+            model=CONFIG['llm']['model'],
+            temperature=CONFIG['llm']['temperature']
+        )
+
+        self.qa_chain = load_qa_chain(
+            llm, 
+            chain_type="stuff", 
+            prompt=PROMPT
+        )
+        return self.qa_chain
           
     def create_vector_store(self, sources_list: List[str]):
         """
@@ -54,8 +88,6 @@ class ProductionRAGPipeline:
         Args:
             sources_list (List[str]): List of source paths or URLs to load information from.
         """
-        import inspect
-        import traceback
         logger.info(f"Creating vector store from {len(sources_list)} sources.")
 
         all_texts = []
@@ -110,11 +142,12 @@ class ProductionRAGPipeline:
             metadatas=all_metadatas
         )
 
-        # Create QA chain
-        self.qa_chain = self._create_qa_chain()
-
         logger.info(f"Vector store created successfully with {len(all_texts)} chunks.")
 
+        # Create QA chain
+        self.qa_chain = self._create_qa_chain()
+        logger.info(f"Created QA chain, qa_chain exists: {self.qa_chain is not None}")
+                
     def get_source_type(self, source: str) -> str:
         """ 
         Helper method to determine source type based on file extension or URL pattern.
@@ -125,36 +158,6 @@ class ProductionRAGPipeline:
             return 'web'
         else:
             return 'local'
-        
-    def _create_qa_chain(self):
-        """
-        Create question-answering (qa) chain with a better prompt template and error handling.
-        """    
-        prompt_template = """You are a helpful assistant that answers questions based on the provided information. Use the following context to answer the question. 
-        
-        Context:
-        {context}
-
-        Question: {question}
-
-        Answer in a concise and accurate manner, and only use the provided context to answer. If the answer is not in the context, say "I don't know".
-        """
-        PROMPT = PromptTemplate(
-            template=prompt_template, 
-            input_variables=["context", "question"]
-        )
-
-        llm = OpenAI(
-            openai_api_key=self.openai_api_key,
-            model=CONFIG['llm']['model'],
-            temperature=CONFIG['llm']['temperature']
-        )
-
-        self.qa_chain = load_qa_chain(
-            llm, 
-            chain_type="stuff", 
-            prompt=PROMPT
-        )
         
     def query(self, question: str, return_sources: bool = True) -> Dict[str, Any]:
         """
@@ -212,32 +215,32 @@ class ProductionRAGPipeline:
             raise
 
 # ==================== LEGACY FUNCTIONS (for backward compatibility) ====================
-    def create_vector_store_legacy(pdf_path: str, openai_api_key: str) -> FAISS:
-        """
-        Legacy function for creating vector store from a single PDF file. This can be used for backward compatibility or testing purposes.
+def create_vector_store_legacy(pdf_path: str, openai_api_key: str) -> FAISS:
+    """
+    Legacy function for creating vector store from a single PDF file. This can be used for backward compatibility or testing purposes.
 
-        Args:
-            pdf_path (str): Path to the PDF file to load and create vector store from.
-            openai_api_key (str): OpenAI API key for creating embeddings.
+    Args:
+        pdf_path (str): Path to the PDF file to load and create vector store from.
+        openai_api_key (str): OpenAI API key for creating embeddings.
 
-        Returns:
-            faiss.FAISS: The created FAISS vector store with the PDF content.
-        """
-        pipeline = ProductionRAGPipeline(openai_api_key)
-        pipeline.create_vector_store([pdf_path])
-        return pipeline.vector_store
+    Returns:
+        faiss.FAISS: The created FAISS vector store with the PDF content.
+    """
+    pipeline = ProductionRAGPipeline(openai_api_key)
+    pipeline.create_vector_store([pdf_path])
+    return pipeline.vector_store
         
-    def get_qa_chain_legacy(openai_api_key: str):
-        """
-        Legacy function for creating QA chain. This can be used for backward compatibility or testing purposes.
-        """
-        pipeline = ProductionRAGPipeline(openai_api_key)
-        pipeline._create_qa_chain()
-        return pipeline.qa_chain
-    
-    def query_vector_store_legacy(vector_store: FAISS, chain: Any, question: str) -> str:
-        """
-        Legacy function for querying the vector store and getting an answer. This can be used for backward compatibility or testing purposes.
-        """
-        docs = vector_store.similarity_search(question)
-        return chain.run(input_documents=docs, question=question)
+def get_qa_chain_legacy(openai_api_key: str):
+    """
+    Legacy function for creating QA chain. This can be used for backward compatibility or testing purposes.
+    """
+    pipeline = ProductionRAGPipeline(openai_api_key)
+    pipeline._create_qa_chain()
+    return pipeline.qa_chain
+
+def query_vector_store_legacy(vector_store: FAISS, chain: Any, question: str) -> str:
+    """
+    Legacy function for querying the vector store and getting an answer. This can be used for backward compatibility or testing purposes.
+    """
+    docs = vector_store.similarity_search(question)
+    return chain.run(input_documents=docs, question=question)
