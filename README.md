@@ -100,6 +100,7 @@ When running locally:
 This application is designed to be deployed on Render.
 
 **Live demo**: [https://rag-infohub.onrender.com/docs](https://rag-infohub.onrender.com/docs)
+
 (*Note: This is hosted on a free tier that spins down after 15 mins inactivity. So first request after idle may take upto 30-60 secs. Thank you for your patience!*)
 
 ## References
@@ -111,4 +112,5 @@ This application is designed to be deployed on Render.
 - [Docker Documentation](https://docs.docker.com/)
 
 - [Render Documentation](https://render.com/docs)
+
 
